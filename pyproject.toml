@@ -2,6 +2,7 @@
 name = "mlb-live"
 version = "0.1.0"
 description = "Baseball Live Score"
+package-mode = false
 requires-python = ">=3.10"
 dependencies = [
     "flask>=3.0.0",
