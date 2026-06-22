@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: mlb-live
+    name: mlb-live-score
     env: python
     buildCommand: "poetry install --no-root"
     startCommand: "poetry run python app.py"
