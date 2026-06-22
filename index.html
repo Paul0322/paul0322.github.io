@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>棒球即時比分</title>
+<style>
+:root {
+  --bg:#0a0f1e;--bg2:#111827;--card:#161d2e;--card2:#1c2539;--border:#1f2d45;
+  --text:#e2e8f0;--muted:#94a3b8;--accent:#38bdf8;--gold:#f59e0b;--live:#f43f5e;--final:#10b981;
+  --ball:#22c55e;--strike:#facc15;--out:#ef4444;--runner:#ef4444;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans TC",sans-serif;min-height:100vh}
+.header{background:linear-gradient(135deg,#0f172a 0%,#1e1b4b 100%);border-bottom:1px solid var(--border);padding:16px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.header-left{display:flex;align-items:center;gap:12px}
+.logo{font-size:1.5rem}.title{font-size:1.1rem;font-weight:700;color:var(--accent)}.subtitle{font-size:.75rem;color:var(--muted)}
+.controls{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.tabs{display:flex;gap:4px}.tab{padding:10px 16px;font-size:.85rem;font-weight:700;border:none;background:transparent;cursor:pointer;color:var(--muted);border-bottom:2px solid transparent;transition:all .2s}.tab:hover{color:var(--text)}.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.date-ctrl{display:flex;align-items:center;gap:8px}.date-input{padding:8px 12px;border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:6px;font-size:.85rem}.date-btn{padding:8px 12px;border:none;background:var(--card);color:var(--accent);cursor:pointer;border-radius:6px;font-weight:700;font-size:.8rem}
+.grid{display:grid;grid-template-columns:minmax(0,1fr);gap:24px;padding:26px 32px;max-width:1320px;margin:0 auto}
+.card{background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;display:flex;flex-direction:column;transition:transform .15s}.card:hover{transform:translateY(-2px);border-color:#2d3f60}
+.card-bar{height:3px;background:linear-gradient(90deg,#334155,#475569)}.card-bar.live{background:linear-gradient(90deg,#f43f5e,#fb923c)}.card-bar.final{background:linear-gradient(90deg,#10b981,#06b6d4)}
+.meta{display:flex;justify-content:space-between;align-items:center;padding:16px 22px 10px;font-size:.9rem;color:var(--muted);gap:16px}.status{font-weight:800}.status.live{color:var(--live)}.status.final{color:var(--final)}
+.score-hdr{display:grid;grid-template-columns:minmax(250px,1fr) 170px minmax(250px,1fr);align-items:center;padding:16px 22px 18px;gap:22px}.team-block{display:flex;flex-direction:column;gap:4px;min-width:0}.team-block.right{text-align:right}.team-name{font-size:1.28rem;font-weight:850;line-height:1.35;word-break:keep-all;overflow-wrap:anywhere}.team-lbl{font-size:.78rem;color:var(--muted)}.vs{display:flex;align-items:center;gap:10px;min-width:150px;justify-content:center}.big-score{font-size:2.85rem;font-weight:950;line-height:1}.big-score.lead{color:#fbbf24}
+.score-table-wrap{overflow:visible;padding:0 22px 16px}
+table{width:100%;border-collapse:collapse;font-size:.92rem;table-layout:fixed}th,td{padding:8px 9px;border:1px solid var(--border);min-width:0;text-align:center;white-space:nowrap}thead th{background:#0d1425;color:var(--muted);font-weight:650}th.cur,td.cur{color:var(--gold);font-weight:850}th:first-child,td.t-name{width:220px}td.t-name{text-align:left;padding-left:14px;color:var(--text);font-weight:850;white-space:normal;line-height:1.25}
+.live-bar{margin:0 22px 14px;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:12px 16px;display:flex;align-items:center;gap:16px}.counts{display:flex;gap:10px;flex-wrap:wrap}.c-row{display:flex;align-items:center;gap:6px;font-size:.82rem}.dots{display:flex;gap:3px}.dot{width:10px;height:10px;border-radius:50%;background:#1e2d45;border:1px solid #2a3a55}.dot.b{background:var(--ball);border-color:var(--ball)}.dot.s{background:var(--strike);border-color:var(--strike)}.dot.o{background:var(--out);border-color:var(--out)}
+.diamond{position:relative;width:50px;height:50px;flex:0 0 auto}.base{position:absolute;width:12px;height:12px;border:2px solid #2a3a55;transform:rotate(45deg)}.base.on{background:var(--runner);border-color:#fff5;box-shadow:0 0 6px rgba(239,68,68,.7)}.b1{top:18px;right:4px}.b2{top:0;left:19px}.b3{top:18px;left:4px}
+.pbp{margin:0 22px 18px;padding:10px 14px;background:rgba(0,0,0,.2);border-left:3px solid var(--accent);border-radius:0 6px 6px 0;font-size:.86rem;color:#cbd5e1;min-height:38px}.empty{grid-column:1/-1;text-align:center;padding:60px 20px;color:var(--muted)}.empty-icon{font-size:3rem;margin-bottom:12px}
+@media (max-width:760px){.header,.controls{padding-left:14px;padding-right:14px}.grid{grid-template-columns:1fr;padding:14px}.tab{padding:9px 12px}.meta{padding:12px 14px 8px;font-size:.76rem}.score-hdr{grid-template-columns:1fr;gap:12px;padding:12px 14px 14px}.team-block.right{text-align:left}.team-name{font-size:1.05rem}.vs{justify-content:flex-start;min-width:0}.big-score{font-size:2.1rem}.score-table-wrap{padding:0 10px 12px}table{font-size:.68rem}th,td{padding:4px 3px}th:first-child,td.t-name{width:92px}td.t-name{padding-left:6px}.pbp{margin-left:14px;margin-right:14px}}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <span class="logo">⚾</span>
+    <div>
+      <div class="title">棒球即時比分</div>
+      <div class="subtitle">MLB / NPB / KBO</div>
+    </div>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="tabs">
+    <button class="tab active" onclick="switchLeague('MLB',this)">MLB</button>
+    <button class="tab" onclick="switchLeague('NPB',this)">NPB</button>
+    <button class="tab" onclick="switchLeague('KBO',this)">KBO</button>
+  </div>
+  <div class="date-ctrl">
+    <button class="date-btn" onclick="prevDay()">前一天</button>
+    <input type="date" class="date-input" id="dateInput" onchange="onDateChange()">
+    <button class="date-btn" onclick="nextDay()">後一天</button>
+  </div>
+</div>
+
+<div class="grid" id="grid">
+  <div class="empty"><div class="empty-icon">⚾</div><p>資料載入中</p></div>
+</div>
+
+<script>
+let league = 'MLB';
+let date = new Date();
+
+function ymdLocal(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+function setDate(d) {
+  date = new Date(d);
+  document.getElementById('dateInput').value = ymdLocal(date);
+  load();
+}
+
+function prevDay() { setDate(new Date(date.getTime() - 86400000)); }
+function nextDay() { setDate(new Date(date.getTime() + 86400000)); }
+function onDateChange() { setDate(document.getElementById('dateInput').value + 'T00:00:00'); }
+
+function switchLeague(nextLeague, btn) {
+  league = nextLeague;
+  document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+  btn.classList.add('active');
+  load();
+}
+
+function dots(total, active, cls) {
+  let html = '';
+  for (let i = 0; i < total; i += 1) html += `<div class="dot ${i < active ? cls : ''}"></div>`;
+  return html;
+}
+
+function renderGame(g) {
+  const live = g.Status === '比賽中';
+  const final = g.Status === '已結束';
+  const status = live ? `${g.IsTopInning ? '上' : '下'}${g.CurrentInning}局` : g.Status;
+  const awayLead = g.AwayTeamRuns > g.HomeTeamRuns;
+  const homeLead = g.HomeTeamRuns > g.AwayTeamRuns;
+
+  let innHead = '', awayInn = '', homeInn = '';
+  const count = Math.max(9, (g.Innings || []).length);
+  for (let i = 1; i <= count; i += 1) {
+    const cur = live && i === g.CurrentInning ? ' class="cur"' : '';
+    const inn = (g.Innings || []).find(x => x.num === i);
+    innHead += `<th${cur}>${i}</th>`;
+    awayInn += `<td${cur}>${inn && inn.away !== null && inn.away !== undefined ? inn.away : '-'}</td>`;
+    homeInn += `<td${cur}>${inn && inn.home !== null && inn.home !== undefined ? inn.home : '-'}</td>`;
+  }
+
+  const liveHtml = live ? `<div class="live-bar">
+    <div class="counts">
+      <div class="c-row">B<div class="dots">${dots(3, g.Balls, 'b')}</div></div>
+      <div class="c-row">S<div class="dots">${dots(2, g.Strikes, 's')}</div></div>
+      <div class="c-row">O<div class="dots">${dots(2, g.Outs, 'o')}</div></div>
+    </div>
+    <div class="diamond">
+      <div class="base b1 ${g.RunnerOnFirst ? 'on' : ''}"></div>
+      <div class="base b2 ${g.RunnerOnSecond ? 'on' : ''}"></div>
+      <div class="base b3 ${g.RunnerOnThird ? 'on' : ''}"></div>
+    </div>
+  </div>` : '';
+
+  return `<div class="card">
+    <div class="card-bar ${live ? 'live' : final ? 'final' : ''}"></div>
+    <div class="meta">
+      <span>${g.GameTime || ''}${g.Venue ? ` · ${g.Venue}` : ''}</span>
+      <span class="status ${live ? 'live' : final ? 'final' : ''}">${status}</span>
+    </div>
+    <div class="score-hdr">
+      <div class="team-block">
+        <div class="team-lbl">客隊</div>
+        <div class="team-name">${g.AwayTeam}</div>
+      </div>
+      <div class="vs">
+        <span class="big-score ${awayLead ? 'lead' : ''}">${g.AwayTeamRuns}</span>
+        <span>:</span>
+        <span class="big-score ${homeLead ? 'lead' : ''}">${g.HomeTeamRuns}</span>
+      </div>
+      <div class="team-block right">
+        <div class="team-lbl">主隊</div>
+        <div class="team-name">${g.HomeTeam}</div>
+      </div>
+    </div>
+    <div class="score-table-wrap">
+      <table>
+        <thead><tr><th></th>${innHead}<th>R</th><th>H</th><th>E</th></tr></thead>
+        <tbody>
+          <tr><td class="t-name">${g.AwayTeam}</td>${awayInn}<td>${g.AwayTeamRuns}</td><td>${g.AwayTeamHits}</td><td>${g.AwayTeamErrors}</td></tr>
+          <tr><td class="t-name">${g.HomeTeam}</td>${homeInn}<td>${g.HomeTeamRuns}</td><td>${g.HomeTeamHits}</td><td>${g.HomeTeamErrors}</td></tr>
+        </tbody>
+      </table>
+    </div>
+    ${liveHtml}
+    <div class="pbp" id="pbp-${g.GameID}">讀取賽事資訊中</div>
+  </div>`;
+}
+
+async function load() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = `<div class="empty"><div class="empty-icon">⚾</div><p>資料載入中</p></div>`;
+  try {
+    const ymd = ymdLocal(date);
+    const res = await fetch(`/api/games?league=${league}&date=${ymd}`);
+    const data = await res.json();
+    const games = data.games || [];
+    document.getElementById('dateInput').value = data.date || ymd;
+
+    if (!games.length) {
+      grid.innerHTML = `<div class="empty"><div class="empty-icon">—</div><p>${league} 這天沒有賽事資料</p></div>`;
+      return;
+    }
+
+    grid.innerHTML = games.map(renderGame).join('');
+    games.forEach(game => loadPBP(game.GameID));
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">!</div><p>資料讀取失敗，請稍後再試</p></div>`;
+  }
+}
+
+async function loadPBP(gameId) {
+  try {
+    const logs = await (await fetch(`/api/playbyplay/${gameId}`)).json();
+    const el = document.getElementById(`pbp-${gameId}`);
+    if (!el) return;
+    el.textContent = logs && logs.length ? (logs[logs.length - 1].Description || '暫無即時文字紀錄') : '暫無即時文字紀錄';
+  } catch (err) {}
+}
+
+document.getElementById('dateInput').value = ymdLocal(date);
+load();
+setInterval(load, 30000);
+</script>
+</body>
+</html>
