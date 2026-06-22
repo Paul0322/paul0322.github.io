@@ -168,4 +168,118 @@ function renderGame(g) {
       homeInn += `<td class="inn-score">-</td>`;
     } else {
       awayInn += `<td class="inn-score">${node && node.away !== null ? node.away : (g.Innings && g.Innings.length >= i ? '0' : '-')}</td>`;
-      homeInn += `<td class="inn-score">${node && node.home !== null ? node.home : (g
+      homeInn += `<td class="inn-score">${node && node.home !== null ? node.home : (g.Innings && g.Innings.length >= i ? '0' : '-')}</td>`;
+    }
+  }
+
+  let liveHtml = '';
+  if (g.Status === '比賽中') {
+    const b1 = g.RunnerOnFirst ? 'active' : '';
+    const b2 = g.RunnerOnSecond ? 'active' : '';
+    const b3 = g.RunnerOnThird ? 'active' : '';
+    
+    let bDots = '', sDots = '', oDots = '';
+    for(let i=1; i<=3; i++) {
+      if(i<=3) bDots += `<span class="dot b ${g.Balls >= i ? 'active' : ''}"></span>`;
+      if(i<=2) sDots += `<span class="dot s ${g.Strikes >= i ? 'active' : ''}"></span>`;
+      if(i<=2) oDots += `<span class="dot o ${g.Outs >= i ? 'active' : ''}"></span>`;
+    }
+
+    liveHtml = `
+    <div class="live-box">
+      <div class="count-indicators">
+        <div class="count-row">B ${bDots}</div>
+        <div class="count-row">S ${sDots}</div>
+        <div class="count-row">O ${oDots}</div>
+      </div>
+      <div class="diamond-wrapper">
+        <div class="diamond">
+          <span class="base b1 ${b1}"></span>
+          <span class="base b2 ${b2}"></span>
+          <span class="base b3 ${b3}"></span>
+        </div>
+      </div>
+    </div>`;
+  }
+
+  const isAwayActive = g.Status === '比賽中' && g.IsTopInning;
+  const isHomeActive = g.Status === '比賽中' && !g.IsTopInning;
+
+  return `
+  <div class="card">
+    <div class="card-header">
+      <div class="venue" title="${g.Venue || '未公佈'}">📍 <span class="venue-text">${g.Venue || '未公佈'}</span></div>
+      <div class="status-badge ${badgeClass}">
+        ${g.Status === '比賽中' ? '● ' : ''}${timeHtml}
+      </div>
+    </div>
+    <div class="scoreboard">
+      <table class="score-table">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding-left:4px">球隊</th>
+            ${ths}
+            <th>R</th><th>H</th><th>E</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="${isAwayActive ? 'active-team' : ''}">
+            <td class="team-name">${g.AwayTeam}</td>
+            ${awayInn}
+            <td class="total">${g.AwayTeamRuns}</td>
+            <td class="stat">${g.AwayTeamHits}</td>
+            <td class="stat">${g.AwayTeamErrors}</td>
+          </tr>
+          <tr class="${isHomeActive ? 'active-team' : ''}">
+            <td class="team-name">${g.HomeTeam}</td>
+            ${homeInn}
+            <td class="total">${g.HomeTeamRuns}</td>
+            <td class="stat">${g.HomeTeamHits}</td>
+            <td class="stat">${g.HomeTeamErrors}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    ${liveHtml}
+    <div class="pbp" id="pbp-${g.GameID}">讀取賽事資訊中</div>
+  </div>`;
+}
+
+async function load() {
+  const grid = document.getElementById('grid');
+  grid.innerHTML = `<div class=\"empty\"><div class=\"empty-icon\">⚾</div><p>資料載入中</p></div>`;
+  try {
+    const ymd = ymdLocal(date);
+    const res = await fetch(`/api/games?league=${league}&date=${ymd}`);
+    const data = await res.json();
+    const games = data.games || [];
+    document.getElementById('dateInput').value = data.date || ymd;
+
+    if (!games.length) {
+      grid.innerHTML = `<div class=\"empty\"><div class=\"empty-icon\">—</div><p>${league} 這天沒有賽事資料</p></div>`;
+      return;
+    }
+
+    grid.innerHTML = games.map(renderGame).join('');
+    games.forEach(game => loadPBP(game.GameID));
+  } catch (err) {
+    console.error(err);
+    grid.innerHTML = `<div class=\"empty\"><div class=\"empty-icon\">!</div><p>資料讀取失敗，請稍後再試</p></div>`;
+  }
+}
+
+async function loadPBP(gameId) {
+  try {
+    const logs = await (await fetch(`/api/playbyplay/${gameId}`)).json();
+    const txt = logs.map(l => l.Description || l.description || '').filter(Boolean).join(' | ');
+    document.getElementById(`pbp-${gameId}`).innerText = txt || '暫無即時動態';
+  } catch(e) {
+    document.getElementById(`pbp-${gameId}`).innerText = '暫無即時文字紀錄';
+  }
+}
+
+load();
+setInterval(load, 60000);
+</script>
+</body>
+</html>
