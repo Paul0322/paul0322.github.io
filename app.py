@@ -139,4 +139,7 @@ def team_zh(name, league):
 
 def mlb_team_zh(team):
     for field in ("fileCode", "abbreviation", "teamName", "name", "shortName"):
-        translated = team_zh(team
+        translated = team_zh(team.get(field, ""), "MLB")
+        if translated and translated != team.get(field, ""):
+            return translated
+    return clean_text(team.get("name") or team.get("teamName") or "")
