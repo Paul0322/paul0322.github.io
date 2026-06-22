@@ -391,6 +391,33 @@ def fetch_kbo(date_str):
 
 
 @app.route("/")
+
+@app.route("/manifest.json")
+def manifest():
+    return app.send_static_file("manifest.json") if os.path.exists("static/manifest.json") else send_from_root_or_inline_json()
+
+# 為了讓根目錄讀得到，最快的方式是直接讓 Flask 用 Route 吐出來
+@app.route("/service-worker.js")
+def service_worker():
+    return app.response_class(
+        'self.addEventListener("fetch", function(event) {});', # 簡易版讓 iOS 能過關即可
+        mimetype="application/javascript"
+    )
+
+@app.route("/manifest.json")
+def pwa_manifest():
+    import json
+    manifest_data = {
+      "name": "棒球即時比分 Live",
+      "short_name": "棒球比分",
+      "start_url": "/",
+      "display": "standalone",
+      "background_color": "#0a0f1e",
+      "theme_color": "#0f172a",
+      "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3306/3306612.png", "sizes": "512x512", "type": "image/png"}]
+    }
+    return jsonify(manifest_data)
+    
 def index():
     return render_template("index.html")
 
@@ -419,7 +446,22 @@ def play_by_play(game_id):
     return jsonify(PBP_CACHE.get(game_id, [{"Description": "暫無即時文字紀錄"}]))
 
 
+@app.route("/manifest.json")
+def pwa_manifest():
+    return jsonify({
+      "name": "棒球即時比分 Live",
+      "short_name": "棒球比分",
+      "start_url": "/",
+      "display": "standalone",
+      "background_color": "#0a0f1e",
+      "theme_color": "#0f172a",
+      "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/3306/3306612.png", "sizes": "512x512", "type": "image/png"}]
+    })
 
+@app.route("/service-worker.js")
+def pwa_sw():
+    return app.response_class('self.addEventListener("fetch", (e) => {});', mimetype="application/javascript")
+    
 if __name__ == "__main__":
     
     port = int(os.environ.get("PORT", 5000))
