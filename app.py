@@ -306,7 +306,7 @@ def fetch_npb(date_str):
             home = team_zh(team2.get_text(" ", strip=True), "NPB")
             ar = to_int(score1.get_text(strip=True)) if score1 else 0
             hr = to_int(score2.get_text(strip=True)) if score2 else 0
-            status = "已結束" if score1 and score2 else "未開賽"
+            status = "已結束" if score1 and score2 and score1.get_text(strip=True) and score2.get_text(strip=True) else "未開賽"
             game_time = f"{date_str} {time_text}".strip()
 
             PBP_CACHE[game_id] = [{"Description": f"{place} {time_text}".strip() or "NPB官方賽程"}]
@@ -374,7 +374,9 @@ def fetch_kbo(date_str):
             home = team_zh(teams[-1], "KBO")
             ar = scores[0] if len(scores) >= 2 else 0
             hr = scores[1] if len(scores) >= 2 else 0
-            status = "已結束" if len(scores) >= 2 else "未開賽"
+            
+            game_dt = datetime.strptime(f"{date_str} {time_text}", "%Y-%m-%d %H:%M").replace(tzinfo=TAIPEI_TZ)
+            status = "已結束" if len(scores) >= 2 and datetime.now(TAIPEI_TZ) >= game_dt else "未開賽"
             relay = BeautifulSoup(relay_html, "html.parser").select_one("a[href]")
             href = relay["href"] if relay else ""
             match = re.search(r"gameId=([^&]+)", href)
@@ -419,6 +421,6 @@ def play_by_play(game_id):
 
 
 if __name__ == "__main__":
-    # 讓 Render 可以動態指定 Port，本機測試時則預設為 5001
-    port = int(os.environ.get("PORT", 5001))
+    
+    port = int(os.environ.get("PORT", 5000))
     app.run(host="0.0.0.0", port=port, debug=False)
