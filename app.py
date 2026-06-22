@@ -419,6 +419,6 @@ def play_by_play(game_id):
 
 
 if __name__ == "__main__":
-    
-    port = int(os.environ.get("PORT", 5000))
+    # 讓 Render 可以動態指定 Port，本機測試時則預設為 5001
+    port = int(os.environ.get("PORT", 5001))
     app.run(host="0.0.0.0", port=port, debug=False)
